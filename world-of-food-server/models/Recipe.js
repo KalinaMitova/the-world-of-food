@@ -22,7 +22,21 @@ const recipeSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-  }
+  },
+  likes: [
+      {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      unique: true,
+    }
+  ],
+  unlikes: [
+      {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      unique: true,
+    }
+  ]
 });
 
 const Recipe = mongoose.model('Recipe', recipeSchema);
