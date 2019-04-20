@@ -2,16 +2,20 @@ const mongoose = require('mongoose');
 const encryption = require('../util/encryption');
 
 const userSchema = new mongoose.Schema({
-  email: {
+  username: {
     type: mongoose.Schema.Types.String,
     required: true,
-    unique: true
+    unique: true,
   },
   hashedPass: {
     type: mongoose.Schema.Types.String,
     required: true
   },
-  name: {
+  firstName: {
+    type: mongoose.Schema.Types.String,
+    required: true
+  },
+  lastName: {
     type: mongoose.Schema.Types.String,
     required: true
   },
@@ -21,6 +25,10 @@ const userSchema = new mongoose.Schema({
   },
   roles: [{
     type: mongoose.Schema.Types.String
+  }],
+  recipes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Recipe'
   }]
 });
 
@@ -37,10 +45,11 @@ User.seedAdminUser = async () => {
     let users = await User.find();
     if (users.length > 0) return;
     const salt = encryption.generateSalt();
-    const hashedPass = encryption.generateHashedPassword(salt, 'Admin');
+    const hashedPass = encryption.generateHashedPassword(salt, '123456');
     return User.create({
-      name: 'Admin',
-      email: 'admin@admin.com',
+      firstName: 'Admin',
+      lastName: 'Adminov',
+      username: 'admin',
       salt,
       hashedPass,
       roles: ['Admin']

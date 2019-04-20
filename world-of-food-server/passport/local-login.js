@@ -4,20 +4,20 @@ const User = require('../models/User');
 const encryption = require('../util/encryption');
 
 module.exports = new PassportLocalStrategy({
-  usernameField: 'email',
+  usernameField: 'username',
   passwordField: 'password',
   session: false,
   passReqToCallback: true
-}, (req, email, password, done) => {
+}, (req, username, password, done) => {
   const user = {
-    email: email.trim(),
+    username: username.trim(),
     password: password.trim()
   }
 
-  User.findOne({email: user.email}).then((savedUser) => {
+  User.findOne({username: user.username}).then((savedUser) => {
     if (!savedUser) {
-      const error = new Error('Incorrect email or password')
-      error.name = 'IncorrectCredentialsError'
+      const error = new Error('Incorrect username or password')
+      error.username = 'IncorrectCredentialsError'
 
       return done(error)
     }
@@ -25,8 +25,8 @@ module.exports = new PassportLocalStrategy({
     const isMatch = savedUser.hashedPass === encryption.generateHashedPassword(savedUser.salt, password);
 
     if (!isMatch) {
-      const error = new Error('Incorrect email or password')
-      error.name = 'IncorrectCredentialsError'
+      const error = new Error('Incorrect username or password')
+      error.username = 'IncorrectCredentialsError'
 
       return done(error)
     }
@@ -39,7 +39,7 @@ module.exports = new PassportLocalStrategy({
     const token = jwt.sign(payload, 's0m3 r4nd0m str1ng');
     const isAdmin = savedUser.roles.indexOf('Admin') != -1;
     const data = {
-      name: savedUser.name,
+      username: savedUser.username,
       isAdmin
     }
 
