@@ -1,39 +1,30 @@
 const mongoose = require('mongoose');
 
-const furnitureSchema = new mongoose.Schema({
-  make: {
+const recipeSchema = new mongoose.Schema({
+  title: {
+    type: mongoose.Schema.Types.String,
+    required: true,
+    unique: true,
+  },
+  ingredients: [{
     type: mongoose.Schema.Types.String,
     required: true
+  }],
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true,
   },
-  model: {
+  imageUrl: {
     type: mongoose.Schema.Types.String,
-    required: true
-  },
-  year: {
-    type: mongoose.Schema.Types.Number,
-    required: true
-  },
-  description: {
-    type: mongoose.Schema.Types.String,
-    required: true
-  },
-  price: {
-    type: mongoose.Schema.Types.Number,
-    required: true
-  },
-  image: {
-    type: mongoose.Schema.Types.String,
-    required: true
-  },
-  material: {
-    type: mongoose.Schema.Types.String
   },
   creator: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: true,
   }
 });
 
-const Furniture = mongoose.model('Furniture', furnitureSchema);
+const Recipe = mongoose.model('Recipe', recipeSchema);
 
-module.exports = Furniture;
+module.exports = Recipe;
