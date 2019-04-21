@@ -4,8 +4,8 @@ const passport = require('passport')
 const localSignupStrategy = require('../passport/local-signup')
 const localLoginStrategy = require('../passport/local-login')
 const authRoutes = require('../routes/auth')
-const furnitureRoutes = require('../routes/furniture')
-const statsRoutes = require('../routes/stats')
+const recipeRoutes = require('../routes/recipe')
+const statsRoutes = require('../routes/category')
 
 module.exports = app => {
   app.use(bodyParser.urlencoded({
@@ -22,6 +22,6 @@ module.exports = app => {
 
   // routes
   app.use('/auth', authRoutes)
-  app.use('/furniture', furnitureRoutes)
-  app.use('/stats', statsRoutes)
+  app.use('/recipe', recipeRoutes)
+  app.use('/category', categoryRoutes)
 }

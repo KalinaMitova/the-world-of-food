@@ -25,10 +25,6 @@ const userSchema = new mongoose.Schema({
   },
   roles: [{
     type: mongoose.Schema.Types.String
-  }],
-  recipes: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Recipe'
   }]
 });
 

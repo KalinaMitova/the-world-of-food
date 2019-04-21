@@ -6,10 +6,14 @@ const recipeSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  ingredients: [{
+  ingredients: {
     type: mongoose.Schema.Types.String,
     required: true
-  }],
+  },
+  directions:{
+    type: mongoose.Schema.Types.String,
+    required: true
+  },
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
@@ -25,15 +29,7 @@ const recipeSchema = new mongoose.Schema({
   },
   likes: [
       {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      unique: true,
-    }
-  ],
-  unlikes: [
-      {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: mongoose.Schema.Types.String,
       unique: true,
     }
   ]

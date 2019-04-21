@@ -6,10 +6,6 @@ const CategorySchema = new mongoose.Schema( {
     required: true,
     unique: true,
   },
-  ingredients: [ {
-    type: mongoose.Schema.Types.String,
-    required: true
-  } ],
   recipes:[ {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Recipe',

@@ -1,46 +1,49 @@
 const express = require('express')
 const authCheck = require('../middleware/auth-check');
-const Recepe = require('../models/Recipe');
+const Recipe = require('../models/Recipe');
+const Category = require('../models/Category');
 
 const router = new express.Router()
 
-function validaterecipeForm (payload) {
+function validateRecipeForm (payload) {
   const errors = {}
   let isFormValid = true
   let message = ''
 
-  payload.year = parseInt(payload.year)
-  payload.price = parseInt(payload.price)
-
-  if (!payload || typeof payload.make !== 'string' || payload.make.length < 3) {
+  if (!payload || typeof payload.title !== 'string' || payload.title.length < 3) {
     isFormValid = false
-    errors.make = 'Make must be more than 3 symbols.'
+    errors.make = 'Title must be more than 3 symbols.'
   }
 
-  if (!payload || typeof payload.model !== 'string' || payload.model.length < 3) {
+  if (!payload || typeof payload.ingredients !== 'string' || payload.model.length < 3 || /\r|\n/.exec(payload.ingredients)) {
     isFormValid = false
-    errors.model = 'Model must be more than 3 symbols.'
+    errors.model = 'Each ingredient must be in a new row!'
   }
 
-  if (!payload || !payload.year || payload.year < 1950 || payload.year > 2050) {
+  if (!payload || typeof payload.directions !== 'string' || payload.directions.length < 200) {
     isFormValid = false
-    errors.year = 'Year must be between 1950 and 2050.'
+    errors.year = 'Directions at least 200 symbols.'
   }
 
-  if (!payload || typeof payload.description !== 'string' || payload.description.length < 10) {
+  if (!payload || !payload.category) {
     isFormValid = false
-    errors.description = 'Description must be more than 10 symbols.'
+    errors.category = 'Category is required!'
   }
 
-  if (!payload || !payload.price || payload.price < 0) {
-    isFormValid = false
-    errors.price = 'Price must be a positive number.'
-  }
+  if (payload || typeof payload.imageUrl !== 'string' ) {
+      isFormValid = false
+      errors.image = 'Image URL must be a string.'
+    }else if(payload || typeof payload.imageUrl === 'string'){
+        if (payload.imageUrl.startsWitn('http') < 0) {
+                isFormValid = false
+                errors.image = 'Image URL must  starts with "http" or "https".'
+              }
+              if (!(payload.imageUrl.endsWith('jpg') >= 0 || payload.imageUrl.endsWith('png') >= 0)) {
+                isFormValid = false
+                errors.image = 'Image URL must  ends with "jpg" or "png".'
+              }
+      }
 
-  if (!payload || typeof payload.image !== 'string' || payload.image.length === 0) {
-    isFormValid = false
-    errors.image = 'Image URL is required.'
-  }
 
   if (!isFormValid) {
     message = 'Check the form for errors.'
@@ -56,7 +59,9 @@ function validaterecipeForm (payload) {
 router.post('/create', authCheck, (req, res) => {
   const recipe = req.body
   recipe.creator = req.user._id
-  const validationResult = validaterecipeForm(recipe)
+  recipe.likes=[]
+
+  const validationResult = validateRecipeForm(recipe)
   if (!validationResult.success) {
     return res.status(400).json({
       success: false,
@@ -65,12 +70,18 @@ router.post('/create', authCheck, (req, res) => {
     })
   }
 
-  Recepe.create(recipe)
+  Recipe.create(recipe)
     .then(() => {
-      res.status(200).json({
+      Category.update(
+        {_id: category.id},
+        {$pull:{recipes: recipe.id}}
+        )
+      .then(()=>{
+        res.status(200).json({
         success: true,
-        message: 'recipe added successfully.',
+        message: 'Recipe added successfully.',
         recipe
+      })
       })
     })
 })
@@ -79,15 +90,15 @@ router.get('/all', authCheck ,(req, res) => {
   const page = parseInt(req.query.page) || 1
   const search = req.query.search
 
-  Recepe.find({})
-    .then((recipe) => {
-      return res.status(200).json(recipe)
+  Recipe.find()
+    .then(recipes => {
+      return res.status(200).json(recipes)
     })
 })
 
 router.get('/details/:id', authCheck, (req, res) => {
   const id = req.params.id
-  Recepe.findById(id)
+  Recipe.findById(id)
     .then((recipe) => {
       if (!recipe) {
         return res.status(404).json({
@@ -98,29 +109,28 @@ router.get('/details/:id', authCheck, (req, res) => {
 
       let response = {
         id,
-        make: recipe.make,
-        model: recipe.model,
-        year: recipe.year,
-        description: recipe.description,
-        price: recipe.price,
-        image: recipe.image,
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        directions: recipe.directions,
+        category: recipe.category,
+        creator: recipe.creator,
+        likes: recipe.likes.count(),
       }
 
-      if (recipe.material) {
-        response.material = recipe.material
+      if (recipe.imageUrl) {
+        response.imageUrl = recipe.imageUrl
       }
 
       res.status(200).json(response)
     })
 })
 
-
 router.get('/user', authCheck, (req, res) => {
   const user = req.user._id
 
-  Recepe.find({creator: user})
-    .then((recipe) => {
-      return res.status(200).json(recipe)
+  Recipe.find({creator: user})
+    .then((recipes) => {
+      return res.status(200).json(recipes)
     })
 })
 
@@ -128,7 +138,7 @@ router.delete('/delete/:id', authCheck, (req, res) => {
   const id = req.params.id
   const user = req.user._id
 
-  Recepe.findById(id)
+  Recipe.findById(id)
     .then((recipe) => {
       if (!recipe) {
         return res.status(200).json({
@@ -144,11 +154,16 @@ router.delete('/delete/:id', authCheck, (req, res) => {
          })
       }
 
-      Recepe.findByIdAndDelete(id)
+      Recipe.findByIdAndDelete(id)
         .then(() => {
+          Category.update(
+            {_id: recipe.category},
+            {$pull: {resipes: recipe.id}},
+            {multy: true}
+            )
           return res.status(200).json({
             success: true,
-            message: 'recipe deleted successfully!'
+            message: 'Recipe deleted successfully!'
           })
         })
     })
@@ -161,18 +176,18 @@ router.put('/edit/:id', authCheck, (req, res) => {
   if (!recipe) {
     return res.status(404).json({
       success: false,
-      message: 'recipe does not exists!'
+      message: 'Recipe does not exists!'
     })
   }
 
-  if (!req.user.roles.includes('Admin')) {
+  if ((recipe.creator.toString() != user && !req.user.roles.includes("Admin"))) {
     return res.status(401).json({
       success: false,
       message: 'Unauthorized!'
     })
   }
 
-  const validationResult = validaterecipeForm(recipe)
+  const validationResult = validateRecipeForm(recipe)
   if (!validationResult.success) {
     return res.status(400).json({
       success: false,
@@ -181,43 +196,141 @@ router.put('/edit/:id', authCheck, (req, res) => {
     })
   }
 
-  Recepe.findByIdAndUpdate(id, recipe)
-    .then(() => {
+  Recipe.findByIdAndUpdate(id, recipe)
+    .then((r) => {
       return res.status(200).json({
         success: true,
-        message: 'recipe edited successfully!'
+        message: 'Recipe edited successfully!',
+        recipeNew: recipe,
+        recipeAfterUpdate: r
       })
   })
 })
 
-router.get('/:id', authCheck, (req, res) => {
-  const id = req.params.id
+// router.get('/:id', authCheck, (req, res) => {
+//   const id = req.params.id
 
-  Recepe.findById(id)
+//   Recipe.findById(id)
+//     .then(recipe => {
+//       if (!recipe) {
+//         return res.status(404).json({
+//           success: false,
+//           message: 'Entry does not exists!'
+//         })
+//       }
+
+//       let response = {
+//         id,
+//         make: recipe.make,
+//         model: recipe.model,
+//         year: recipe.year,
+//         description: recipe.description,
+//         price: recipe.price,
+//         image: recipe.image
+//       }
+
+//       if (recipe.material) {
+//         response.material = recipe.material
+//       }
+
+//       res.status(200).json(response)
+//     })
+
+    router.post('/like/:id', authCheck, (req, res) => {
+  const id = req.params.id
+  const username = req.user.username
+  Recipe
+    .findById(id)
     .then(recipe => {
       if (!recipe) {
-        return res.status(404).json({
+        const message = 'Recipe not found.'
+        return res.status(200).json({
           success: false,
-          message: 'Entry does not exists!'
+          message: message
         })
       }
 
-      let response = {
-        id,
-        make: recipe.make,
-        model: recipe.model,
-        year: recipe.year,
-        description: recipe.description,
-        price: recipe.price,
-        image: recipe.image
+      let likes = recipe.likes
+      if (!likes.includes(username)) {
+        likes.push(username)
       }
-
-      if (recipe.material) {
-        response.material = recipe.material
-      }
-
-      res.status(200).json(response)
+      recipe.likes = likes
+      recipe
+        .save()
+        .then((recipe) => {
+          res.status(200).json({
+            success: true,
+            message: 'Book liked successfully.',
+            data: recipe
+          })
+        })
+        .catch((err) => {
+          console.log(err)
+          const message = 'Something went wrong :('
+          return res.status(200).json({
+            success: false,
+            message: message
+          })
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      const message = 'Something went wrong :('
+      return res.status(200).json({
+        success: false,
+        message: message
+      })
     })
 })
+
+router.post('/unlike/:id', authCheck, (req, res) => {
+  const id = req.params.id
+  const username = req.user.username
+  Recipe
+    .findById(id)
+    .then(recipe => {
+      if (!recipe) {
+        let message = 'Recipe not found.'
+        return res.status(200).json({
+          success: false,
+          message: message
+        })
+      }
+
+      let likes = recipe.likes
+      if (likes.includes(username)) {
+        const index = likes.indexOf(username)
+        likes.splice(index, 1)
+      }
+
+      recipe.likes = likes
+      recipe
+        .save()
+        .then((recipe) => {
+          res.status(200).json({
+            success: true,
+            message: 'Recipe unliked successfully.',
+            data: recipe
+          })
+        })
+        .catch((err) => {
+          console.log(err)
+          const message = 'Something went wrong :('
+          return res.status(200).json({
+            success: false,
+            message: message
+          })
+        })
+    })
+    .catch((err) => {
+      console.log(err)
+      const message = 'Something went wrong :('
+      return res.status(200).json({
+        success: false,
+        message: message
+      })
+    })
+})
+
 
 module.exports = router
