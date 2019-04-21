@@ -2,6 +2,7 @@ const express = require('express')
 const Category = require('../models/Category');
 const Recipe = require('../models/Recipe');
 const adminCheck = require('../middleware/admin-check');
+const authCheck = require('../middleware/auth-check');
 
 const router = new express.Router()
 
@@ -12,14 +13,14 @@ function validateCategoryForm (payload) {
 
   if (!payload || typeof payload.name !== 'string' || payload.name.length < 3) {
     isFormValid = false
-    errors.make = 'Category name must be more than 3 symbols.'
+    errors.name = 'Category name must be more than 3 symbols.'
   }
 
-  if (!payload || typeof payload.imageUrl !== 'string' ||             payload.imageUrl.length.trim() === 0) {
+  if (!payload || typeof payload.imageUrl !== 'string' ||             payload.imageUrl.trim().length === 0) {
       isFormValid = false
       errors.image = 'Image URL is required.'
     }else{
-        if (payload.imageUrl.startsWitn('http') < 0) {
+        if (payload.imageUrl.startsWith('http') < 0) {
                 isFormValid = false
                 errors.image = 'Image URL must  starts with "http" or "https".'
               }
@@ -70,6 +71,7 @@ router.post('/create', authCheck, adminCheck, (req, res) => {
 
 router.get('/:id', authCheck, (req, res) => {
   const id = req.params.id
+  console.log(id)
   Category.findById(id)
     .then((category) => {
       if (!category) {
@@ -78,7 +80,9 @@ router.get('/:id', authCheck, (req, res) => {
           message: `Category does not exists!`
         })
       }
-      res.status(200).json(response)
+      res.status(200).json(category)
+    }).catch(err =>{
+      console.log("error: " + err)
     })
 })
 
@@ -100,7 +104,7 @@ router.put('/edit/:id', authCheck, adminCheck, (req, res) => {
     })
   }
 
-  const validationResult = validateCategoryForm(recipe)
+  const validationResult = validateCategoryForm(category)
   if (!validationResult.success) {
     return res.status(400).json({
       success: false,

@@ -34,7 +34,7 @@ function validateRecipeForm (payload) {
       isFormValid = false
       errors.image = 'Image URL must be a string.'
     }else if(payload || typeof payload.imageUrl === 'string'){
-        if (payload.imageUrl.startsWitn('http') < 0) {
+        if (payload.imageUrl.startsWith('http') < 0) {
                 isFormValid = false
                 errors.image = 'Image URL must  starts with "http" or "https".'
               }
